@@ -46,3 +46,18 @@ variable "pl_services" {
   }
 }
 
+
+############################
+# S3 Variables
+############################
+variable "name_prefix" {
+  description = "Prefix used for shared resources like the NLB access logs bucket"
+  type        = string
+  default = "cc-private-link-services"
+}
+
+variable "nlb_access_logs_retention_days" {
+  description = "How long to retain NLB access logs in S3"
+  type        = number
+  default     = 30
+}
