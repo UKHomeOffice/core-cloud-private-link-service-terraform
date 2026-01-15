@@ -1,0 +1,12 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: core-cloud-private-link-service-terraform
+  description: A repo for Core Cloud PL Service Configuration.
+  annotations:
+    github.com/project-slug: UKHomeOffice/core-cloud-private-link-service-terraform
+spec:
+  type: service
+  owner: core-cloud-devops
+  lifecycle: experimental
+  system: core-cloud
