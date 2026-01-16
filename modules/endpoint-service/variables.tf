@@ -46,6 +46,12 @@ variable "pl_services" {
   }
 }
 
+variable "supported_regions" {
+  description = "Regions supported by the VPC Endpoint Service (PrivateLink). Null/empty means default (same region only)."
+  type        = list(string)
+  default     = null
+}
+
 
 ############################
 # S3 Variables
