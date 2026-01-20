@@ -226,6 +226,7 @@ resource "aws_vpc_endpoint_service" "privatelink_service" {
   acceptance_required        = each.value.acceptance_required
   network_load_balancer_arns = [aws_lb.nlb[each.key].arn]
   allowed_principals         = each.value.allowed_principals
+  supported_regions          = try(each.value.supported_regions, var.supported_regions, null)
 
   tags = merge(
   var.tags,
