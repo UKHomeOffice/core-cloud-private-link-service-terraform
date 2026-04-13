@@ -18,6 +18,11 @@ locals {
 
 # One log bucket shared by all NLBs in this module
 resource "aws_s3_bucket" "nlb_access_logs" {
+  #checkov:skip=CKV2_AWS_62:NLB access logs bucket is intentionally notification-free in this module.
+  #checkov:skip=CKV_AWS_145:AES256 encryption is sufficient for this log sink; KMS is not required here.
+  #checkov:skip=CKV_AWS_144:Cross-region replication is intentionally not enabled for transient access logs.
+  #checkov:skip=CKV_AWS_21:Bucket versioning is intentionally disabled for write-once access logs.
+  #checkov:skip=CKV_AWS_18:Bucket access logging is intentionally not enabled to avoid recursive log writes.
   count  = var.existing_nlb_access_logs_bucket_name == null ? 1 : 0
   bucket = local.nlb_access_logs_bucket_name
 
@@ -27,6 +32,7 @@ resource "aws_s3_bucket" "nlb_access_logs" {
 
 # Keep ownership so logs land correctly
 resource "aws_s3_bucket_ownership_controls" "nlb_access_logs" {
+  #checkov:skip=CKV2_AWS_65:BucketOwnerPreferred is required for ELB/NLB access log delivery ACL behavior.
   count  = var.existing_nlb_access_logs_bucket_name == null ? 1 : 0
   bucket = aws_s3_bucket.nlb_access_logs[0].id
   rule {
@@ -135,6 +141,7 @@ resource "aws_s3_bucket_policy" "nlb_access_logs" {
 ############################
 
 resource "aws_lb" "nlb" {
+  #checkov:skip=CKV_AWS_150:Deletion protection is intentionally disabled for Terraform-managed ephemeral environments.
   for_each = var.pl_services
 
   name                             = each.value.name
@@ -183,6 +190,8 @@ resource "aws_lb_target_group" "tg" {
 ###################
 
 resource "aws_lb_listener" "listener" {
+  #checkov:skip=CKV_AWS_2:This module provisions NLB listeners (TCP/TLS), not ALB HTTPS listeners.
+  #checkov:skip=CKV_AWS_103:Listener protocol and TLS policy are service-driven and may be TCP by design.
   for_each = var.pl_services
 
   load_balancer_arn = aws_lb.nlb[each.key].arn
@@ -233,6 +242,7 @@ resource "aws_lb_target_group_attachment" "target_2" {
 ###################
 
 resource "aws_vpc_endpoint_service" "privatelink_service" {
+  #checkov:skip=CKV_AWS_123:acceptance_required is configurable per service and may be false for trusted principals.
   for_each = var.pl_services
 
   acceptance_required        = each.value.acceptance_required
