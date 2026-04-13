@@ -5,14 +5,21 @@
 data "aws_caller_identity" "current" {}
 data "aws_region" "current" {}
 
-# One log bucket shared by all NLBs in this module
-resource "aws_s3_bucket" "nlb_access_logs" {
-  bucket = format(
+locals {
+  default_nlb_access_logs_bucket_name = format(
     "%s-nlb-access-logs-%s-%s",
     var.name_prefix,
     data.aws_caller_identity.current.account_id,
     data.aws_region.current.id
   )
+
+  nlb_access_logs_bucket_name = coalesce(var.existing_nlb_access_logs_bucket_name, local.default_nlb_access_logs_bucket_name)
+}
+
+# One log bucket shared by all NLBs in this module
+resource "aws_s3_bucket" "nlb_access_logs" {
+  count  = var.existing_nlb_access_logs_bucket_name == null ? 1 : 0
+  bucket = local.nlb_access_logs_bucket_name
 
   tags = var.tags
 }
@@ -20,7 +27,8 @@ resource "aws_s3_bucket" "nlb_access_logs" {
 
 # Keep ownership so logs land correctly
 resource "aws_s3_bucket_ownership_controls" "nlb_access_logs" {
-  bucket = aws_s3_bucket.nlb_access_logs.id
+  count  = var.existing_nlb_access_logs_bucket_name == null ? 1 : 0
+  bucket = aws_s3_bucket.nlb_access_logs[0].id
   rule {
     object_ownership = "BucketOwnerPreferred"
   }
@@ -28,7 +36,8 @@ resource "aws_s3_bucket_ownership_controls" "nlb_access_logs" {
 
 # Block public access
 resource "aws_s3_bucket_public_access_block" "nlb_access_logs" {
-  bucket                  = aws_s3_bucket.nlb_access_logs.id
+  count                   = var.existing_nlb_access_logs_bucket_name == null ? 1 : 0
+  bucket                  = aws_s3_bucket.nlb_access_logs[0].id
   block_public_acls       = true
   block_public_policy     = true
   ignore_public_acls      = true
@@ -37,7 +46,8 @@ resource "aws_s3_bucket_public_access_block" "nlb_access_logs" {
 
 # (Optional) Encrypt at rest
 resource "aws_s3_bucket_server_side_encryption_configuration" "nlb_access_logs" {
-  bucket = aws_s3_bucket.nlb_access_logs.id
+  count  = var.existing_nlb_access_logs_bucket_name == null ? 1 : 0
+  bucket = aws_s3_bucket.nlb_access_logs[0].id
 
   rule {
     apply_server_side_encryption_by_default {
@@ -48,7 +58,8 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "nlb_access_logs" 
 
 # Lifecycle to control cost
 resource "aws_s3_bucket_lifecycle_configuration" "nlb_access_logs" {
-  bucket = aws_s3_bucket.nlb_access_logs.id
+  count  = var.existing_nlb_access_logs_bucket_name == null ? 1 : 0
+  bucket = aws_s3_bucket.nlb_access_logs[0].id
 
   rule {
     id     = "expire-nlb-logs"
@@ -65,7 +76,8 @@ resource "aws_s3_bucket_lifecycle_configuration" "nlb_access_logs" {
 # - This uses the modern log delivery service principals.
 # - The ACL condition is important for ownership expectations.
 resource "aws_s3_bucket_policy" "nlb_access_logs" {
-  bucket = aws_s3_bucket.nlb_access_logs.id
+  count  = var.existing_nlb_access_logs_bucket_name == null ? 1 : 0
+  bucket = aws_s3_bucket.nlb_access_logs[0].id
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -76,8 +88,8 @@ resource "aws_s3_bucket_policy" "nlb_access_logs" {
         Principal = "*"
         Action    = "s3:*"
         Resource = [
-          aws_s3_bucket.nlb_access_logs.arn,
-          "${aws_s3_bucket.nlb_access_logs.arn}/*"
+          aws_s3_bucket.nlb_access_logs[0].arn,
+          "${aws_s3_bucket.nlb_access_logs[0].arn}/*"
         ]
         Condition = {
           Bool = {
@@ -95,7 +107,7 @@ resource "aws_s3_bucket_policy" "nlb_access_logs" {
         Action = [
           "s3:PutObject"
         ]
-        Resource = "${aws_s3_bucket.nlb_access_logs.arn}/*"
+        Resource = "${aws_s3_bucket.nlb_access_logs[0].arn}/*"
         Condition = {
           StringEquals = {
             "s3:x-amz-acl" = "bucket-owner-full-control"
@@ -112,7 +124,7 @@ resource "aws_s3_bucket_policy" "nlb_access_logs" {
           "s3:GetBucketAcl",
           "s3:ListBucket"
         ]
-        Resource = aws_s3_bucket.nlb_access_logs.arn
+        Resource = aws_s3_bucket.nlb_access_logs[0].arn
       }
     ]
   })
@@ -132,7 +144,7 @@ resource "aws_lb" "nlb" {
   enable_cross_zone_load_balancing = true
 
   access_logs {
-    bucket  = aws_s3_bucket.nlb_access_logs.bucket
+    bucket  = local.nlb_access_logs_bucket_name
     prefix  = "nlb/${each.value.name}"
     enabled = true
   }

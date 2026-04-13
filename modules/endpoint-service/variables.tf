@@ -66,3 +66,9 @@ variable "nlb_access_logs_retention_days" {
   type        = number
   default     = 30
 }
+
+variable "existing_nlb_access_logs_bucket_name" {
+  description = "Existing shared S3 bucket name for NLB access logs. When set, this module will not create or manage the log bucket resources."
+  type        = string
+  default     = null
+}

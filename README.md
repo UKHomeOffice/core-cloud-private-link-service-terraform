@@ -38,6 +38,7 @@ No modules.
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
 | <a name="input_account_id"></a> [account\_id](#input\_account\_id) | AWS account ID for the perimeter account (used for tagging/metadata if needed). | `string` | n/a | yes |
+| <a name="input_existing_nlb_access_logs_bucket_name"></a> [existing\_nlb\_access\_logs\_bucket\_name](#input\_existing\_nlb\_access\_logs\_bucket\_name) | Existing shared S3 bucket name for NLB access logs. When set, this module will not create or manage the log bucket resources. | `string` | `null` | no |
 | <a name="input_name_prefix"></a> [name\_prefix](#input\_name\_prefix) | Prefix used for shared resources like the NLB access logs bucket | `string` | `"cc-private-link-services"` | no |
 | <a name="input_nlb_access_logs_retention_days"></a> [nlb\_access\_logs\_retention\_days](#input\_nlb\_access\_logs\_retention\_days) | How long to retain NLB access logs in S3 | `number` | `30` | no |
 | <a name="input_pl_services"></a> [pl\_services](#input\_pl\_services) | Map of PrivateLink services to create. | <pre>map(object({<br>    name = string<br><br>    service_target_ips = list(string)<br>    listener_port      = optional(number, 443)<br>    protocol           = optional(string, "TCP")<br><br>    acceptance_required = optional(bool, true)<br>    allowed_principals  = optional(set(string), [])<br>  }))</pre> | n/a | yes |
